@@ -1,0 +1,46 @@
+ 
+
+.wrapper{
+	width: 1124px;
+	margin: 0 auto;
+}
+
+body {
+  padding-top: 50px;
+}
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+div[title^='my']{
+	padding: 10px;
+	background: #f4f4f4;
+	margin: 0 0 10px 0;
+}
+#todolist:parent{
+	margin: 10px 0 0;
+}
+#todolist{
+	margin: 0;
+	padding: 0;
+}
+.button-group{
+	margin: 0 0 20px 0;
+}
+.todo-wrapper{
+	margin: 10px 0;
+}
+.date{
+	font-size: 90%;
+    color: #9c9c9c;
+}
+.form-wrapper{
+	margin: 10px;
+}
+.todoitem .action{
+	display: none;
+}
+.todoitem:hover .action{
+	display: inline-block;
+}

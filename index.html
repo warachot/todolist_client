@@ -1,0 +1,415 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/bootstrap-theme.min.css">
+<link rel="stylesheet" href="css/font-awesome.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script type="text/javascript" src="js/jquery-2.1.4.min.js"></script>
+<script type="text/javascript" src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/validator.min.js"></script>
+<script type="text/javascript" src="js/todo.js"></script>
+</head>
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+	 var resURL = "http://localhost:8080";
+	 
+	 function confirm(options)
+			{
+			    var x = $('#confirm-dialog');
+			    if (x.length == 0)
+			    {
+			        x = $('<div id="confirm-dialog" class="modal fade" tabindex="-1">\
+			    <div class="modal-dialog">\
+			        <div class="modal-content">\
+			            <div class="modal-header"><h3 class="modal-title"></h3></div>\
+			            <div class="modal-body"></div>\
+			            <div class="modal-footer">\
+			                <button class="btn"></button>\
+			                <button class="btn" data-dismiss="modal">Cancel</button>\
+			            </div>\
+			        </div>\
+			    </div>\
+			</div>');
+			        $('.portlet-body').append(x);
+			    }
+			    x.find('.modal-title').html(options.title);
+			    x.find('.modal-body').html(options.message);
+			    var buttons = x.find('.modal-footer button');
+			    buttons.removeClass('btn-primary');
+			    if (options.primary == undefined) buttons.eq(1).addClass('btn-primary');
+			    else buttons.eq(options.primary).addClass('btn-primary');
+			    buttons.eq(0).text(options.confirmButton).off('click').on('click', function()
+			    {
+			        x.modal('hide');
+			        console.log($.isFunction(options.onConfirm));
+			        if ($.isFunction(options.onConfirm)) options.onConfirm(options.args);
+			    });
+			    x.modal({'show': true, 'backdrop': 'static'});
+			}
+
+	function onEdit(e){
+		//toast(e.data.id);
+		//alert(e.data.id);
+	 	getTodo(e.data.id);
+	}
+	
+	function onDelete(e){
+		deleteTodo(e.data.id);
+	}
+		
+	
+	function toDatetime(timestamp){
+	 var a = new Date(timestamp);
+	 var year = a.getFullYear();
+	 var month = a.getMonth();
+	 var date = a.getDate();
+	 m = "";
+	
+	 if((month+1) < 10){
+		 m = "0"+(month+1);
+	 }else{
+		 m = (month+1);
+	 }
+	 d = "";
+	 if(date < 10){
+		 d = "0"+date;
+	 }else{
+		 d = date;
+	 }
+	 
+	 var time = d + '-' +  m + '-' + year+ ' '+ a.getHours() + ':'+a.getMinutes() + ':' + a.getSeconds();
+	 return time;
+	}
+
+	function addTodo(subject,task,status){
+		var d = {};
+		d.subject = subject;
+		d.task = task;
+		d.status = status;
+
+		$.ajax({
+	    	url: resURL + "/todo",
+			type : "POST",
+			contentType: "application/json; charset=utf-8",
+			data:JSON.stringify(d),
+			beforeSend: function() {
+		  		console.log("beforeSend---");
+			},
+			success: function(data){
+				console.log(data);
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+				getTodolist();
+			}
+	    }); 
+	}
+	 
+ 
+	function getTodo(id){
+		$.ajax({
+	    	url: resURL + "/todo/"+id,
+			type : "GET",
+			contentType: "application/json; charset=utf-8",
+			beforeSend: function() {
+		
+				$("#todoSubject").val("");
+				$("#todoTask").val("");
+				$("#todoID_hidden").val(id);
+				$("#btnSave").hide();	
+				$("#btnUpdate").show();
+			},
+			success: function(data){
+				$('#newTodoModal').modal('show');
+				if(data.length > 0){
+					$("#dropdownStatus").text(data[0].status);
+    				$("#dropdownStatus").val(data[0].status);
+					$("#todoSubject").val(data[0].subject);
+					$("#todoTask").val(data[0].task);
+				}
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+				
+			}
+	    }); 
+	}// end get by id
+	
+	
+	function deleteTodo(id){
+	
+	confirm({
+		            title: "Delete",
+		            message: "Are you sure to delete",
+		            confirmButton: "Confirm",
+		            cancelButton : "Cancel",
+	 onConfirm: function(){
+	 	 
+	 	$.ajax({
+	    	url: resURL + "/todo?id="+id,
+			type : "DELETE",
+			contentType: "application/json; charset=utf-8",
+			 
+			beforeSend: function() {
+		  		console.log("beforeSend---");
+			},
+			success: function(data){
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+				getTodolist();
+			}
+	    }); 
+	 }
+	 });
+		
+	}//end delete 
+	
+	function getTodolist(){
+	
+		$.ajax({
+	    	url: resURL + "/todo/list",
+			type : "GET",
+			contentType: "application/json; charset=utf-8",
+			data:{
+				
+			},
+			beforeSend: function() {
+		  		console.log("beforeSend---");
+			},
+			success: function(data){
+				var todolist = $("#todolist");
+				todolist.html("");
+				$.each(data,function(k,v){
+					todolist.append("<li class='list-group-item'><div class='todoitem'>"+
+					"<span class='subject' ><a href='#' id='todoItem_"+v.id+"'>"+v.subject+"</a></span>&nbsp;"+"<span class='action'><a href='#' id='btnEdit_"+v.id+"'>edit</a>&nbsp;<a href='#' id='btnDelete_"+v.id+"'>delete</a></span>"+
+					"<div class='date'><span><b>Status : </b> "+
+					v.status+"</span>&nbsp;<span><b>Date : </b>"+toDatetime(v.creationDate)+"</span></div></div></li>");
+					$("#btnEdit_"+v.id).click({id: v.id},onEdit);
+					$("#btnDelete_"+v.id).click({id: v.id},onDelete);
+					$("#todoItem_"+v.id).click({id: v.id},onViewTask);
+					
+				});
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+			
+			}
+	    }); 
+	    
+	}//end getTodolist
+	
+	getTodolist();
+	
+	function onViewTask(e){
+		$.ajax({
+	    	url: resURL + "/todo/" + e.data.id,
+			type : "GET",
+			contentType: "application/json; charset=utf-8",
+			beforeSend: function() {
+ 
+			},
+			success: function(data){
+				$('#viewTaskModal').modal('show');
+			  	if(data.length > 0){
+
+    				
+					$("#viewTaskSubject").html(data[0].subject);
+					$("#viewTask").html(data[0].task);
+					$("#viewStatus").html(data[0].status);
+					$("#viewTaskDate").html(toDatetime(data[0].creationDate));
+					
+				}
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+				
+			}
+	    }); 
+	}
+	
+	function onUpdateTodo(){
+
+		var d = {};
+		d.id = $("#todoID_hidden").val()
+		d.subject = $("#todoSubject").val();
+		d.task = $("#todoTask").val();
+		d.status = $("#dropdownStatus").val();
+		console.log(d);
+		$.ajax({
+	    	url: resURL+"/todo",
+			type : "PUT",
+			contentType: "application/json; charset=utf-8",
+			data:JSON.stringify(d),
+			beforeSend: function() {
+		  		console.log("beforeSend---");
+			},
+			success: function(data){
+				console.log(data);
+			},
+			error: function(xhr) { // if error occured
+				console.error(xhr);
+			},
+			complete: function() {
+				$('#newTodoModal').modal('hide');
+				getTodolist();
+			}
+	    }); 
+	}
+	
+	function onNewTodo(){
+		$("#btnUpdate").hide();
+		$("#dropdownStatus").text("Pending");
+    	$("#dropdownStatus").val("Pending");
+		$("#todoSubject").val("");
+		$("#todoTask").val("");
+		$("#btnSave").show();
+		$('#newTodoModal').modal('show');
+	}
+	
+	function onSaveTodo(){
+		todoSubject = $("#todoSubject");
+		todoTask = $("#todoTask");
+		status = $("#dropdownStatus").val();
+		 
+		addTodo(todoSubject.val().trim(), todoTask.val().trim(),status);
+		$('#newTodoModal').modal('hide')
+	}
+	
+	$("#btnNew").click(onNewTodo);
+	$("#btnSave").click(onSaveTodo);
+	$("#btnUpdate").click(onUpdateTodo);
+	
+	$(function(){
+		$(".dropdown-menu li a").click(function(){
+	    $("#dropdownStatus").text($(this).text());
+    	$("#dropdownStatus").val($(this).text());
+
+   	});
+
+});
+
+});
+</script>
+<body>
+	<div class='container'>
+	<h3><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;To do list&nbsp; </h3>
+	<div class='button-group'><button type="button" id="btnNew" class="btn btn-primary" data-toggle="modal" ><i class="fa fa-plus" aria-hidden="true"></i>
+&nbsp;New</button></div>
+	<div class='todo-wrapper'>
+		<ul id="todolist" class='list-group'>
+		</ul>
+	</div>
+	
+<div id='newTodoModal' class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+    
+     <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title" id="exampleModalLabel">View Task</h4>
+	</div>
+	 <div class="modal-body">
+    	<div class='form-wrapper'>
+		  <form>
+		  <input type="hidden" id="todoID_hidden" />
+		  <div class="form-group">
+			<label for="todoSubject">Subject</label>
+			<input type="text" class="form-control" id="todoSubject" placeholder="">
+		  </div>
+		  <div class="form-group">
+			<label for="todoTask">Task</label>
+			<textarea class="form-control" rows="3" id="todoTask"></textarea>
+		  </div>
+		<div class='form-group'>
+			<div class="dropdown">
+				<label for="dropdownStatus">Status</label>
+				<button class="btn btn-default dropdown-toggle"  type="button" id="dropdownStatus" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+				Pending
+				<span class="caret"></span>
+				</button>
+				<ul class="dropdown-menu" aria-labelledby="dropdownStatus">
+				<li><a href="#">Pending</a></li>
+				<li><a href="#">Done</a></li>
+				 
+				</ul>
+			</div>
+		</div>
+		
+		</form>
+    	</div>
+    	</div>
+    	
+    	 <div class="modal-footer">
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        	<button type="button" id="btnSave" class="btn btn-primary">Save</button>
+        	<button type="button" id="btnUpdate" class="btn btn-primary">Update</button>
+     	 </div>
+     	 
+    </div>
+  </div>
+</div>
+<!-- end add/edit form -->
+
+<div id='viewTaskModal' class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+  
+   
+    <div class="modal-content">
+     <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title" id="exampleModalLabel">View Task</h4>
+	</div>
+     <div class="modal-body">
+    	<div class='form-wrapper'>
+			<div class='control-group'>
+				<label for="viewTaskSubject">Subject</label>
+				<span id="viewTaskSubject"></span>
+			</div>		   
+			<div class='control-group'>
+				<label for="viewTask">Task</label>
+				<span id="viewTask"></span>
+			</div>		   
+			<div class='control-group'>
+				<label for="viewStatus">Status</label>
+				<span id="viewStatus"></span>
+			</div>	
+			<div class='control-group'>
+				<label for="viewTaskDate">date</label>
+				<span id="viewTaskDate"></span>
+			</div>	
+    	</div>
+    	</div>
+    		 <div class="modal-footer">
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      	 </div>
+    </div><!-- modal-content-->
+  </div>
+</div>
+ 
+	</div> <!-- end container -->
+	
+	
+	
+
+
+</body>
+</html>
